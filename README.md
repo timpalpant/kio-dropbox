@@ -4,7 +4,7 @@
 [![Release](https://img.shields.io/github/v/release/timpalpant/kio-dropbox?include_prereleases&label=release&logo=github)](https://github.com/timpalpant/kio-dropbox/releases)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](LICENSE)
 
-A [KIO worker](https://develop.kde.org/docs/features/kio/) that makes a Dropbox
+A [KIO worker](https://api.kde.org/kio-index.html) that makes a Dropbox
 account browsable as `dropbox:/` in Dolphin and every other KDE application.
 
 There is no proprietary Dropbox client involved and nothing is synced to disk —
