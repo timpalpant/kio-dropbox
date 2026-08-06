@@ -33,9 +33,25 @@ public:
 
     bool isConfigured() const;
 
-    QString appKey() const
+    /*!
+     * The key this account authenticates with: the user's own if they supplied
+     * one, otherwise whatever was baked in at build time.
+     */
+    QString appKey() const;
+
+    /*!
+     * The key compiled in via -DDROPBOX_APP_KEY, or empty if the build didn't
+     * set one. Empty means every user has to register an app of their own.
+     *
+     * This is not a secret. PKCE exists because native apps are public clients
+     * that cannot hold one; the key only identifies which app is asking.
+     */
+    static QString builtInAppKey();
+
+    /*! Whether the user supplied a key of their own, overriding the built-in. */
+    bool hasCustomAppKey() const
     {
-        return m_appKey;
+        return !m_appKey.isEmpty();
     }
     QString refreshToken() const
     {

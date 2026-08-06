@@ -48,10 +48,13 @@ export KIO_DROPBOX_CONTENT_BASE="$BASE/content/2/"
 export KIO_DROPBOX_TOKEN_ENDPOINT="$BASE/oauth2/token"
 export QT_PLUGIN_PATH="$BUILD_DIR/src/plugins${QT_PLUGIN_PATH:+:$QT_PLUGIN_PATH}"
 
-# KIO looks for workers under <plugin path>/kf6/kio/, so mirror the build output
-# into that layout rather than installing system-wide.
-mkdir -p "$BUILD_DIR/src/plugins/kf6/kio"
+# Plugins are found by directory layout, so mirror the build output into the
+# structure KIO and System Settings expect rather than installing system-wide.
+mkdir -p "$BUILD_DIR/src/plugins/kf6/kio" "$BUILD_DIR/src/plugins/plasma/kcms/systemsettings_qwidgets"
 cp "$BUILD_DIR/src/dropbox.so" "$BUILD_DIR/src/plugins/kf6/kio/dropbox.so"
+cp "$BUILD_DIR/src/kcm_dropbox.so" "$BUILD_DIR/src/plugins/plasma/kcms/systemsettings_qwidgets/kcm_dropbox.so"
+
+AUTH="$BUILD_DIR/src/kio-dropbox-auth"
 
 # --- harness ------------------------------------------------------------------
 
@@ -180,6 +183,40 @@ check "recovers from an expired access token" "hello from dropbox" "$out"
 inject_fault rate_limit_once
 out="$(kc cat dropbox:/documents/notes.txt)"
 check "retries after HTTP 429" "hello from dropbox" "$out"
+
+# --- sidebar and System Settings ----------------------------------------------
+
+# These run offscreen against the sandboxed XDG_DATA_HOME above, so the real
+# Places sidebar is never touched.
+auth() { QT_QPA_PLATFORM=offscreen timeout 60 "$AUTH" "$@" 2>&1; }
+# grep -c prints 0 and *also* exits non-zero when there are no matches, so the
+# exit status has to be swallowed rather than treated as "no file".
+places_count() {
+    local xbel="$XDG_DATA_HOME/user-places.xbel"
+    [[ -f "$xbel" ]] || { echo 0; return; }
+    grep -c 'href="dropbox:/"' "$xbel" || true
+}
+
+check_contains "sidebar starts out absent" "Not in the file manager sidebar" "$(auth --status)"
+
+auth --sidebar show > /dev/null
+check "adding the sidebar entry writes one bookmark" "1" "$(places_count)"
+check_contains "status reports the sidebar entry" "Shown in the file manager sidebar" "$(auth --status)"
+
+auth --sidebar show > /dev/null
+check "adding twice does not duplicate it" "1" "$(places_count)"
+
+auth --sidebar hide > /dev/null
+check "removing the sidebar entry" "0" "$(places_count)"
+
+auth --sidebar bogus > /dev/null 2>&1
+check "an invalid --sidebar value is rejected" "2" "$?"
+
+if command -v kcmshell6 > /dev/null; then
+    check_contains "System Settings discovers the module" "kcm_dropbox" "$(timeout 60 kcmshell6 --list 2>&1 | grep -i dropbox)"
+else
+    ok "System Settings discovery (skipped: no kcmshell6)"
+fi
 
 # --- report -------------------------------------------------------------------
 

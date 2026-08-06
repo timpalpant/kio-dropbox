@@ -13,7 +13,9 @@ Every operation below is covered by an integration test that drives the real,
 built worker through `kioclient` against a local stand-in for the Dropbox API
 (see [Testing](#testing)) — listing with pagination, streaming reads, chunked
 uploads, server-side move and copy, recursive delete, overwrite semantics,
-access-token refresh and HTTP 429 backoff.
+access-token refresh and HTTP 429 backoff. The same suite checks that the
+sidebar entry is added and removed correctly and that System Settings discovers
+the configuration module.
 
 Two things that suite cannot cover, and which are therefore still unverified:
 
@@ -36,6 +38,8 @@ Two things that suite cannot cover, and which are therefore still unverified:
 | Copy within Dropbox | yes | server-side, no data transfer |
 | Copy to/from local | yes | via KIO's generic streaming fallback |
 | Free space | yes | shown in Dolphin's status bar |
+| Sidebar entry | yes | under **Remote**, toggleable |
+| System Settings page | yes | Network → Settings → Dropbox |
 | Shared links, revisions, Paper | no | |
 
 Known limitations:
@@ -49,8 +53,10 @@ Known limitations:
 ## Building
 
 Dependencies: Qt 6 (Core, Network, Gui, Widgets) and KDE Frameworks 6 (KIO,
-CoreAddons, I18n, Wallet, WidgetsAddons). On Arch/EndeavourOS these come from
-`qt6-base`, `kio` and `kwallet`, all of which a Plasma desktop already has.
+CoreAddons, I18n, Wallet, WidgetsAddons, ConfigWidgets, KCMUtils). On
+Arch/EndeavourOS these come from `qt6-base`, `kio`, `kwallet` and `kcmutils`,
+all of which a Plasma desktop already has. Notably *not* required is
+`extra-cmake-modules`, since the individual KF6 config files are self-contained.
 
 ```sh
 cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/usr
@@ -58,10 +64,18 @@ cmake --build build -j$(nproc)
 sudo cmake --install build
 ```
 
-The worker has to live somewhere Qt's plugin loader looks, which is why the
+That installs three things:
+
+| | |
+| --- | --- |
+| `…/qt6/plugins/kf6/kio/dropbox.so` | the worker |
+| `…/qt6/plugins/plasma/kcms/systemsettings_qwidgets/kcm_dropbox.so` | the System Settings page |
+| `…/bin/kio-dropbox-auth` | the standalone setup window |
+
+All of them have to live somewhere Qt's plugin loader looks, which is why the
 default prefix is `/usr`. To install without root, pick a prefix and point Qt at
 it — but note that this must be set for the whole desktop session, not just one
-shell, or Dolphin won't see the protocol:
+shell, or Dolphin and System Settings won't see them:
 
 ```sh
 cmake --install build --prefix ~/.local
@@ -70,18 +84,22 @@ export QT_PLUGIN_PATH="$HOME/.local/lib/qt6/plugins:$QT_PLUGIN_PATH"
 ```
 
 Log out and back in after installing, so running applications pick up the new
-protocol.
+protocol and the new settings page.
 
 ## Linking an account
 
-Dropbox requires every application to be registered, and has no way to ship a
-key safely in open-source code, so you register a small app of your own. Run:
+Configure it in **System Settings → Network → Settings → Dropbox**, or run the
+same thing as a standalone window:
 
 ```sh
 kio-dropbox-auth
 ```
 
-and follow the three steps it shows:
+If the build was configured with `-DDROPBOX_APP_KEY=…`, this is one click:
+**Connect to Dropbox**, approve the request, paste the code back.
+
+Otherwise you register a Dropbox app of your own first. Follow the steps the
+page shows:
 
 1. Create an app at <https://www.dropbox.com/developers/apps/create> — choose
    **Scoped access**, then **Full Dropbox**, and any name you like.
@@ -95,11 +113,23 @@ and follow the three steps it shows:
 The OAuth exchange uses PKCE with no redirect URI, so there is nothing to
 configure on the Dropbox side and no local web server involved.
 
-Afterwards, type `dropbox:/` into Dolphin's location bar — or find **Dropbox**
-under **Network**. Drag it to the Places panel to keep it around.
+Linking adds **Dropbox** to Dolphin's sidebar, under **Remote**. Already-running
+Dolphin windows pick it up without a restart. Untick **Show Dropbox in the file
+manager sidebar** to take it back out — that checkbox has no separate stored
+setting; whether the sidebar entry exists *is* the setting. It can also be
+driven from a script:
+
+```sh
+kio-dropbox-auth --sidebar show
+kio-dropbox-auth --sidebar hide
+kio-dropbox-auth --status
+```
+
+You can also reach Dropbox by typing `dropbox:/` into the location bar, or from
+**Network** in Dolphin.
 
 If no account is linked when you open `dropbox:/`, the worker offers to launch
-this dialog for you.
+the setup window for you.
 
 ### Where credentials are stored
 
@@ -134,7 +164,7 @@ test suite; there is no reason to set them in normal use.
 
 ## Debugging
 
-KIO workers log through Qt's categorised logging:
+KIO workers log through Qt's categorized logging:
 
 ```sh
 QT_LOGGING_RULES='kf.kio.*=true' dolphin dropbox:/

@@ -1,0 +1,11 @@
+{
+    "KPlugin": {
+        "Description": "Link a Dropbox account for browsing as dropbox:/",
+        "Icon": "folder-dropbox",
+        "Name": "Dropbox"
+    },
+    "X-DocPath": "kcontrol6/dropbox/index.html",
+    "X-KDE-Keywords": "dropbox,cloud,storage,online,account,kio,dolphin",
+    "X-KDE-System-Settings-Parent-Category": "networksettings",
+    "X-KDE-Weight": 60
+}

@@ -117,9 +117,19 @@ void DropboxAccount::load()
     loadCachedAccessToken();
 }
 
+QString DropboxAccount::builtInAppKey()
+{
+    return QString::fromLatin1(DROPBOX_BUILTIN_APP_KEY);
+}
+
+QString DropboxAccount::appKey() const
+{
+    return m_appKey.isEmpty() ? builtInAppKey() : m_appKey;
+}
+
 bool DropboxAccount::isConfigured() const
 {
-    return !m_appKey.isEmpty() && !m_refreshToken.isEmpty();
+    return !appKey().isEmpty() && !m_refreshToken.isEmpty();
 }
 
 void DropboxAccount::setAccountInfo(const QString &email, const QString &displayName)
@@ -198,7 +208,7 @@ QString DropboxAccount::accessToken(QNetworkAccessManager *nam, QString *errorTe
     QUrlQuery form;
     form.addQueryItem("grant_type"_L1, "refresh_token"_L1);
     form.addQueryItem("refresh_token"_L1, m_refreshToken);
-    form.addQueryItem("client_id"_L1, m_appKey);
+    form.addQueryItem("client_id"_L1, appKey());
 
     QNetworkRequest request{QUrl(tokenEndpoint())};
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded"_L1);
@@ -246,7 +256,7 @@ bool DropboxAccount::redeemAuthorizationCode(QNetworkAccessManager *nam, const Q
     QUrlQuery form;
     form.addQueryItem("grant_type"_L1, "authorization_code"_L1);
     form.addQueryItem("code"_L1, code);
-    form.addQueryItem("client_id"_L1, m_appKey);
+    form.addQueryItem("client_id"_L1, appKey());
     form.addQueryItem("code_verifier"_L1, codeVerifier);
 
     QNetworkRequest request{QUrl(tokenEndpoint())};
@@ -318,7 +328,7 @@ void DropboxAccount::loadCachedAccessToken()
     const QJsonObject json = QJsonDocument::fromJson(file.readAll()).object();
     // Tie the cache to the key it was minted for, so relinking a different app
     // doesn't resurrect a stale token.
-    if (json.value("app_key"_L1).toString() != m_appKey) {
+    if (json.value("app_key"_L1).toString() != appKey()) {
         return;
     }
 
@@ -340,7 +350,7 @@ void DropboxAccount::storeCachedAccessToken() const
     file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
 
     QJsonObject json;
-    json["app_key"_L1] = m_appKey;
+    json["app_key"_L1] = appKey();
     json["access_token"_L1] = m_accessToken;
     json["expires_at"_L1] = m_accessTokenExpiry.toSecsSinceEpoch();
     file.write(QJsonDocument(json).toJson(QJsonDocument::Compact));

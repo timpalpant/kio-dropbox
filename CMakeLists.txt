@@ -22,7 +22,17 @@ find_package(KF6KIO 6.0 REQUIRED)
 find_package(KF6CoreAddons 6.0 REQUIRED)
 find_package(KF6I18n 6.0 REQUIRED)
 find_package(KF6Wallet 6.0 REQUIRED)
+find_package(KF6KCMUtils 6.0 REQUIRED)
+find_package(KF6ConfigWidgets 6.0 REQUIRED)
 find_package(KF6WidgetsAddons 6.0 REQUIRED)
+
+# A Dropbox app key baked into the build, so users don't have to register an app
+# of their own. The key is not a secret -- PKCE exists precisely because native
+# apps are public clients that cannot keep one (RFC 8252) -- but Dropbox caps an
+# unapproved app at 50 linked users and rate-limits per app, so a packaged build
+# wants a key that has been through Dropbox's production approval.
+# Leave empty to make every user supply their own.
+set(DROPBOX_APP_KEY "" CACHE STRING "Dropbox app key to bake into the build (optional)")
 
 # ECM's KDEInstallDirs would normally provide these.
 set(KIO_DROPBOX_PLUGIN_DIR "${CMAKE_INSTALL_LIBDIR}/qt6/plugins"
@@ -41,4 +51,5 @@ message(STATUS "")
 message(STATUS "kio-dropbox ${PROJECT_VERSION}")
 message(STATUS "  worker  -> ${CMAKE_INSTALL_PREFIX}/${KIO_DROPBOX_PLUGIN_DIR}/kf6/kio/dropbox.so")
 message(STATUS "  helper  -> ${CMAKE_INSTALL_FULL_BINDIR}/kio-dropbox-auth")
+message(STATUS "  kcm     -> ${CMAKE_INSTALL_PREFIX}/${KIO_DROPBOX_PLUGIN_DIR}/plasma/kcms/systemsettings_qwidgets/kcm_dropbox.so")
 message(STATUS "")
