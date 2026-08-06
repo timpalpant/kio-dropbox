@@ -3,25 +3,33 @@
     SPDX-FileCopyrightText: 2026 Timothy Palpant <tim@palpant.us>
     SPDX-License-Identifier: GPL-2.0-or-later
 
-    A remote folder: Breeze-blue folder, cloud on its face. Deliberately not
-    Dropbox's own mark, which is a trademark this project has no licence to use.
+    An open box with a file dropping into it: "drop" and "box", literally.
+    Deliberately not Dropbox's own glyph, which their branding guidelines
+    supply for affordances such as "Save to Dropbox" buttons rather than for
+    use as a third-party application's icon.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
   <defs>
-    <linearGradient id="folder" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="box" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#3daee9"/>
       <stop offset="1" stop-color="#1d76a8"/>
     </linearGradient>
+    <linearGradient id="flap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6dc7f5"/>
+      <stop offset="1" stop-color="#3daee9"/>
+    </linearGradient>
   </defs>
 
-  <path d="M8 12h13l5 6h30a5 5 0 0 1 5 5v26a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V17a5 5 0 0 1 5-5z"
-        fill="url(#folder)"/>
-  <!-- Catches the light along the top edge, the way Breeze folders do. -->
-  <path d="M8 12h13l5 6h30a5 5 0 0 1 5 5v3H3v-9a5 5 0 0 1 5-5z" fill="#ffffff" opacity="0.14"/>
+  <!-- The sheet is drawn first so the box front overlaps it: the file reads as
+       going into the box rather than sitting on top of it. -->
+  <path d="M23 6h12l7 7v19H23z" fill="#ffffff"/>
+  <path d="M35 6l7 7h-7z" fill="#cfd8dc"/>
 
-  <g fill="#ffffff">
-    <circle cx="26" cy="38" r="7"/>
-    <circle cx="38" cy="35" r="9"/>
-    <rect x="22" y="38" width="24" height="8" rx="4"/>
-  </g>
+  <!-- Flaps, opened outward. -->
+  <path d="M8 32h24l-6-9H2z" fill="url(#flap)"/>
+  <path d="M56 32H32l6-9h24z" fill="url(#flap)"/>
+
+  <path d="M8 32h48v18a6 6 0 0 1-6 6H14a6 6 0 0 1-6-6z" fill="url(#box)"/>
+  <!-- Shadow just inside the opening, so the box reads as hollow. -->
+  <path d="M8 32h48v5H8z" fill="#0b3d5c" opacity="0.22"/>
 </svg>

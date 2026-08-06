@@ -18,6 +18,12 @@ files are streamed as they are opened.
 > referred to here only to describe the service this software interoperates
 > with.
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/browsing.png" alt="Dolphin browsing dropbox:/" width="60%">
+</p>
+
 ## Installing
 
 Every release ships Arch, Debian and RPM packages — see

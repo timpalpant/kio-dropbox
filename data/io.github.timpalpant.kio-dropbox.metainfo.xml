@@ -46,6 +46,10 @@
 
   <screenshots>
     <screenshot type="default">
+      <image>https://timpalpant.github.io/kio-dropbox/screenshots/browsing.png</image>
+      <caption>Browsing Dropbox in Dolphin</caption>
+    </screenshot>
+    <screenshot>
       <image>https://timpalpant.github.io/kio-dropbox/screenshots/settings.png</image>
       <caption>Linking an account in System Settings</caption>
     </screenshot>
