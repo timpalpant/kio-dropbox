@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Dropbox Account Setup
+GenericName=Dropbox Account Setup
+Comment=Link a Dropbox account so it can be browsed in Dolphin
+Exec=kio-dropbox-auth
+Icon=folder-dropbox
+Categories=Qt;KDE;Settings;
+Keywords=dropbox;cloud;storage;account;
+NoDisplay=false
+Terminal=false

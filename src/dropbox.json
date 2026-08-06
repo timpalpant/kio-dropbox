@@ -1,0 +1,27 @@
+{
+    "KDE-KIO-Protocols": {
+        "dropbox": {
+            "Class": ":internet",
+            "Icon": "folder-dropbox",
+            "protocol": "dropbox",
+            "input": "none",
+            "output": "filesystem",
+            "listing": ["Name", "Type", "Size", "Date", "MimeType"],
+            "reading": true,
+            "writing": true,
+            "makedir": true,
+            "deleting": true,
+            "deleteRecursive": true,
+            "moving": true,
+            "linking": false,
+            "opening": false,
+            "truncating": false,
+            "copyFromFile": false,
+            "copyToFile": false,
+            "determineMimetypeFromExtension": true,
+            "defaultMimetype": "application/octet-stream",
+            "maxInstances": 6,
+            "maxInstancesPerHost": 3
+        }
+    }
+}
