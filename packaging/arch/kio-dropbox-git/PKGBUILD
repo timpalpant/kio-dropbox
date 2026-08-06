@@ -33,9 +33,9 @@ conflicts=("$_pkgname")
 source=("$_pkgname::git+$url.git")
 sha256sums=('SKIP')
 
-# See the release PKGBUILD for why there is a key and no secret.
-_dropbox_app_key=''
-
+# The app key is committed in CMakeLists.txt -- it is a public client
+# identifier, not a secret. Add -DDROPBOX_APP_KEY=... below to build against
+# your own Dropbox application instead.
 pkgver() {
   cd "$_pkgname"
   git describe --long --tags --abbrev=7 2>/dev/null \
@@ -47,8 +47,7 @@ build() {
   cmake -B build -S "$_pkgname" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
-    -DBUILD_TESTING=ON \
-    -DDROPBOX_APP_KEY="$_dropbox_app_key"
+    -DBUILD_TESTING=ON
   cmake --build build
 }
 

@@ -136,17 +136,6 @@ jobs:
             exit 1
           fi
 
-      # The app key placeholder must not be committed filled in: it is stamped
-      # into the packaging files only when a package is actually built.
-      # --check reports rather than fails, so the result is asserted here.
-      - name: Check the app key placeholder is empty
-        run: |
-          ./packaging/fill-credentials.sh --check | tee creds.txt
-          if grep -q '^filled:' creds.txt; then
-            echo "::error::Packaging files have an app key committed; run packaging/fill-credentials.sh --clear"
-            exit 1
-          fi
-
       # Builds the pacman package the release ships, from this commit, so a
       # broken PKGBUILD surfaces here rather than while cutting a release.
       - name: Build the pacman package
@@ -178,14 +167,11 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Build the package
-        env:
-          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
         run: |
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=/usr \
-            -DBUILD_TESTING=OFF \
-            -DDROPBOX_APP_KEY="$DROPBOX_APP_KEY"
+            -DBUILD_TESTING=OFF
           cmake --build build
           cpack --config build/CPackConfig.cmake -G DEB -B "$PWD/dist"
           for package in dist/*.deb; do sha256sum "$package" > "$package.sha256"; done
@@ -216,14 +202,11 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Build the package
-        env:
-          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
         run: |
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=/usr \
-            -DBUILD_TESTING=OFF \
-            -DDROPBOX_APP_KEY="$DROPBOX_APP_KEY"
+            -DBUILD_TESTING=OFF
           cmake --build build
           cpack --config build/CPackConfig.cmake -G RPM -B "$PWD/dist"
           for package in dist/*.rpm; do sha256sum "$package" > "$package.sha256"; done

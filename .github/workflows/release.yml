@@ -45,18 +45,6 @@ jobs:
       - name: Trust the workspace
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-      - name: Require the package app key
-        # Release artifacts should work without each user registering a Dropbox
-        # application of their own. This repository secret is stamped only into
-        # the runner's temporary package inputs, never committed to Git.
-        #
-        # There is no matching secret to require: the PKCE flow has no client
-        # secret, by design.
-        env:
-          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
-        run: |
-          : "${DROPBOX_APP_KEY:?DROPBOX_APP_KEY repository secret is required for release builds}"
-
       - name: Build and test
         run: |
           cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
@@ -148,11 +136,6 @@ jobs:
 
       - uses: actions/checkout@v7
 
-      - name: Stamp the app key into the package input
-        env:
-          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
-        run: packaging/fill-credentials.sh
-
       - name: Trust the workspace
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
@@ -189,14 +172,11 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Build the package
-        env:
-          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
         run: |
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=/usr \
-            -DBUILD_TESTING=OFF \
-            -DDROPBOX_APP_KEY="$DROPBOX_APP_KEY"
+            -DBUILD_TESTING=OFF
           cmake --build build
           cpack --config build/CPackConfig.cmake -G DEB -B "$PWD/dist"
           for package in dist/*.deb; do sha256sum "$package" > "$package.sha256"; done
@@ -228,14 +208,11 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Build the package
-        env:
-          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
         run: |
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=/usr \
-            -DBUILD_TESTING=OFF \
-            -DDROPBOX_APP_KEY="$DROPBOX_APP_KEY"
+            -DBUILD_TESTING=OFF
           cmake --build build
           cpack --config build/CPackConfig.cmake -G RPM -B "$PWD/dist"
           for package in dist/*.rpm; do sha256sum "$package" > "$package.sha256"; done

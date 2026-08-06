@@ -26,13 +26,26 @@ find_package(KF6KCMUtils 6.0 REQUIRED)
 find_package(KF6ConfigWidgets 6.0 REQUIRED)
 find_package(KF6WidgetsAddons 6.0 REQUIRED)
 
-# A Dropbox app key baked into the build, so users don't have to register an app
-# of their own. The key is not a secret -- PKCE exists precisely because native
-# apps are public clients that cannot keep one (RFC 8252) -- but Dropbox caps an
-# unapproved app at 50 linked users and rate-limits per app, so a packaged build
-# wants a key that has been through Dropbox's production approval.
-# Leave empty to make every user supply their own.
-set(DROPBOX_APP_KEY "" CACHE STRING "Dropbox app key to bake into the build (optional)")
+# The Dropbox app key this project is registered as.
+#
+# It sits here in plain sight on purpose. Sign-in uses PKCE, which exists
+# precisely because a native application is a "public client" under RFC 8252
+# and cannot keep a secret: there is no client secret to pair with this, and the
+# key itself is extractable from any binary that ships it. Hiding it would buy
+# nothing and cost every builder a setup step.
+#
+# Override it at configure time with -DDROPBOX_APP_KEY=... or by exporting
+# DROPBOX_APP_KEY, which a distribution packager might want in order to get rate
+# limits of their own -- Dropbox applies them per app. Users can also enter
+# their own key in the setup dialog, with no rebuild.
+set(_kio_dropbox_default_app_key "a2yvxn27qepxmi7")
+if(NOT "$ENV{DROPBOX_APP_KEY}" STREQUAL "")
+    set(_kio_dropbox_default_app_key "$ENV{DROPBOX_APP_KEY}")
+endif()
+# Note the usual cache semantics: once configured, the cached value wins, so
+# changing the environment later needs -DDROPBOX_APP_KEY or a fresh build dir.
+set(DROPBOX_APP_KEY "${_kio_dropbox_default_app_key}"
+    CACHE STRING "Dropbox app key to build against")
 
 # ECM's KDEInstallDirs would normally provide these.
 set(KIO_DROPBOX_PLUGIN_DIR "${CMAKE_INSTALL_LIBDIR}/qt6/plugins"

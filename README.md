@@ -131,11 +131,14 @@ same thing as a standalone window:
 kio-dropbox-auth
 ```
 
-If the build was configured with `-DDROPBOX_APP_KEY=…`, this is one click:
-**Connect to Dropbox**, approve the request, paste the code back.
+It is one click: **Connect to Dropbox**, approve the request, and paste back the
+code Dropbox shows you. The exchange uses OAuth with PKCE and no redirect URI,
+so there is nothing to configure on the Dropbox side and no local web server
+involved.
 
-Otherwise you register a Dropbox app of your own first. Follow the steps the
-page shows:
+Dropbox applies rate limits per application, so everyone using the built-in key
+draws on one bucket. If you would rather have your own, click **Use my own
+Dropbox app key instead** and follow the steps the page shows:
 
 1. Create an app at <https://www.dropbox.com/developers/apps/create> — choose
    **Scoped access**, then **Full Dropbox**, and any name you like.
@@ -146,8 +149,10 @@ page shows:
 3. Paste the **App key** from the Settings tab, click **Authorize in Browser**,
    approve the request, and paste the code Dropbox shows back into the dialog.
 
-The OAuth exchange uses PKCE with no redirect URI, so there is nothing to
-configure on the Dropbox side and no local web server involved.
+Packagers can build against a different key with `-DDROPBOX_APP_KEY=…` or by
+exporting `DROPBOX_APP_KEY` before configuring. The key is committed in
+`CMakeLists.txt` rather than hidden: it is a public client identifier that ships
+in every binary, and PKCE means there is no client secret to go with it.
 
 Linking adds **Dropbox** to Dolphin's sidebar, under **Remote**. Already-running
 Dolphin windows pick it up without a restart. Untick **Show Dropbox in the file
