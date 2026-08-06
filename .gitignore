@@ -68,3 +68,7 @@ packaging/arch/*/*.tar.gz
 
 # Secrets
 .env
+
+# Python bytecode from the test fixture
+__pycache__/
+*.pyc
