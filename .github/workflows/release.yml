@@ -1,0 +1,304 @@
+# Cuts a release when a vX.Y.Z tag is pushed.
+#
+# Four artifacts are published, plus a checksum for each:
+#   1. kio-dropbox-X.Y.Z.tar.gz         source bundle (pinned by the release PKGBUILD)
+#   2. kio-dropbox-X.Y.Z-*.pkg.tar.zst  Arch package, built with the release PKGBUILD
+#   3. kio-dropbox_*.deb                Debian package
+#   4. kio-dropbox-*.rpm                RPM package
+#
+# No Flatpak, unlike the other projects here. A KIO worker is only useful to
+# applications that can load it, and a Flatpak's plugins are visible inside its
+# own sandbox -- the host's Dolphin would never see dropbox:/. This has to be
+# installed as a host package.
+#
+# GitHub attaches its own "Source code (zip/tar.gz)" links to every release,
+# but those are generated on demand and are not byte-stable, so they cannot be
+# pinned by digest. The tarball built here is a real uploaded asset, which is
+# what makes a sha256sums entry in the PKGBUILD meaningful.
+#
+# The website is deployed by pages.yml, which triggers on the same tag.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    name: Build, test and check versions
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            base-devel cmake ninja git \
+            qt6-base kio kwallet kcmutils ki18n kcoreaddons \
+            kconfig kconfigwidgets kwidgetsaddons \
+            kde-cli-tools python appstream desktop-file-utils
+
+      - uses: actions/checkout@v7
+
+      - name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Require the package app key
+        # Release artifacts should work without each user registering a Dropbox
+        # application of their own. This repository secret is stamped only into
+        # the runner's temporary package inputs, never committed to Git.
+        #
+        # There is no matching secret to require: the PKCE flow has no client
+        # secret, by design.
+        env:
+          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
+        run: |
+          : "${DROPBOX_APP_KEY:?DROPBOX_APP_KEY repository secret is required for release builds}"
+
+      - name: Build and test
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+          cmake --build build
+          ctest --test-dir build --output-on-failure --no-tests=error
+
+      - name: Check the tag agrees with the project metadata
+        # A release whose metadata disagrees with its tag causes confusing
+        # breakage in release packaging, so fail before anything is published.
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          project=$(grep -oP 'project\(kio-dropbox VERSION \K[0-9.]+' CMakeLists.txt)
+          echo "tag=$tag project=$project"
+          if [ "$tag" != "$project" ]; then
+            echo "::error::Tag $tag does not match CMakeLists.txt version $project"
+            exit 1
+          fi
+          if ! grep -q "pkgver=$tag" packaging/arch/kio-dropbox/PKGBUILD; then
+            echo "::error::packaging/arch/kio-dropbox/PKGBUILD pkgver does not match $tag"
+            exit 1
+          fi
+          if ! grep -q "version=\"$tag\"" data/io.github.timpalpant.kio-dropbox.metainfo.xml; then
+            echo "::error::No <release version=\"$tag\"> entry in the AppStream metainfo"
+            exit 1
+          fi
+          appstreamcli validate --no-net data/io.github.timpalpant.kio-dropbox.metainfo.xml
+
+  source:
+    name: Source tarball
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Create the tarball
+        run: |
+          name="kio-dropbox-${GITHUB_REF_NAME#v}"
+          git archive --format=tar.gz --prefix="$name/" \
+            -o "$name.tar.gz" "$GITHUB_REF_NAME"
+          sha256sum "$name.tar.gz" > "$name.tar.gz.sha256"
+
+      # The release PKGBUILD pins this tarball by digest, so the value has to
+      # travel from here into the PKGBUILD. A stale digest left over from an
+      # earlier version is a hard error: it would either break the build or,
+      # worse, describe a file nobody is actually shipping.
+      - name: Report the release PKGBUILD checksum
+        run: |
+          name="kio-dropbox-${GITHUB_REF_NAME#v}"
+          digest=$(cut -d' ' -f1 < "$name.tar.gz.sha256")
+          recorded=$(sed -n "s/^sha256sums=('\(.*\)')/\1/p" packaging/arch/kio-dropbox/PKGBUILD)
+
+          if [ "$recorded" != "$digest" ] && [ "$recorded" != "REPLACE_WITH_RELEASE_SHA256" ]; then
+            echo "::error::packaging/arch/kio-dropbox/PKGBUILD pins $recorded, but this tarball is $digest"
+            exit 1
+          fi
+
+          {
+            echo "### Release PKGBUILD"
+            echo
+            echo "Before publishing the draft, set this in \`packaging/arch/kio-dropbox/PKGBUILD\`:"
+            echo
+            echo '```sh'
+            echo "sha256sums=('$digest')"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$recorded" = "REPLACE_WITH_RELEASE_SHA256" ]; then
+            echo "::warning::PKGBUILD still holds the placeholder checksum; set it to $digest"
+          fi
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: source-tarball
+          path: |
+            kio-dropbox-*.tar.gz
+            kio-dropbox-*.tar.gz.sha256
+          if-no-files-found: error
+
+  archpkg:
+    name: Arch package
+    needs: verify
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm --needed base-devel git pacman-contrib sudo
+
+      - uses: actions/checkout@v7
+
+      - name: Stamp the app key into the package input
+        env:
+          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
+        run: packaging/fill-credentials.sh
+
+      - name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # Uses the release PKGBUILD with its source repointed at this checkout.
+      - name: Build the package
+        run: ./packaging/build-arch-package.sh --outdir "$PWD/dist"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: arch-package
+          path: |
+            dist/*.pkg.tar.zst
+            dist/*.pkg.tar.zst.sha256
+          if-no-files-found: error
+
+  deb:
+    name: Debian package
+    needs: verify
+    runs-on: ubuntu-latest
+    container: debian:trixie
+    steps:
+      - name: Install dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates cmake ninja-build g++ git dpkg-dev file \
+            qt6-base-dev \
+            libkf6kio-dev libkf6wallet-dev libkf6kcmutils-dev \
+            libkf6i18n-dev libkf6coreaddons-dev libkf6config-dev \
+            libkf6configwidgets-dev libkf6widgetsaddons-dev
+
+      - uses: actions/checkout@v7
+
+      - name: Build the package
+        env:
+          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DBUILD_TESTING=OFF \
+            -DDROPBOX_APP_KEY="$DROPBOX_APP_KEY"
+          cmake --build build
+          cpack --config build/CPackConfig.cmake -G DEB -B "$PWD/dist"
+          for package in dist/*.deb; do sha256sum "$package" > "$package.sha256"; done
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: deb-package
+          path: |
+            dist/*.deb
+            dist/*.deb.sha256
+          if-no-files-found: error
+
+  rpm:
+    name: RPM package
+    needs: verify
+    runs-on: ubuntu-latest
+    container: registry.fedoraproject.org/fedora:latest
+    steps:
+      - name: Install dependencies
+        run: |
+          dnf -y install \
+            cmake ninja-build gcc-c++ git rpm-build \
+            qt6-qtbase-devel \
+            kf6-kio-devel kf6-kwallet-devel kf6-kcmutils-devel \
+            kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel \
+            kf6-kconfigwidgets-devel kf6-kwidgetsaddons-devel
+          dnf clean all
+
+      - uses: actions/checkout@v7
+
+      - name: Build the package
+        env:
+          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DBUILD_TESTING=OFF \
+            -DDROPBOX_APP_KEY="$DROPBOX_APP_KEY"
+          cmake --build build
+          cpack --config build/CPackConfig.cmake -G RPM -B "$PWD/dist"
+          for package in dist/*.rpm; do sha256sum "$package" > "$package.sha256"; done
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rpm-package
+          path: |
+            dist/*.rpm
+            dist/*.rpm.sha256
+          if-no-files-found: error
+
+  publish:
+    name: Publish the release
+    needs: [source, archpkg, deb, rpm]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List what will be published
+        run: ls -la artifacts
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          # Drafted rather than published: the release PKGBUILD checksum must
+          # be recorded before the release is announced.
+          draft: true
+          generate_release_notes: true
+          files: artifacts/*
+          body: |
+            ### Install
+
+            **Arch Linux** — install the attached package directly:
+
+            ```sh
+            sudo pacman -U kio-dropbox-*.pkg.tar.zst
+            ```
+
+            **Debian / Ubuntu** — download the attached `.deb`, then:
+
+            ```sh
+            sudo apt install ./kio-dropbox_*.deb
+            ```
+
+            **Fedora / RPM-based** — download the attached `.rpm`, then:
+
+            ```sh
+            sudo dnf install ./kio-dropbox-*.rpm
+            ```
+
+            **From source** — `kio-dropbox-*.tar.gz` is the release tarball used
+            by the release PKGBUILD. A `.sha256` accompanies every artifact.
+
+            Log out and back in after installing, so running applications pick
+            up the new protocol and settings page. Then open **System Settings →
+            Network → Settings → Dropbox** to link an account, and browse
+            `dropbox:/` in Dolphin.
+
+            There is no Flatpak: a KIO worker has to be installed on the host
+            for the host's file manager to load it.
+
+            A Dropbox account is required. This is an unofficial project and is
+            not affiliated with Dropbox, Inc.

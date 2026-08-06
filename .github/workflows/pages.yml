@@ -1,0 +1,55 @@
+# Publishes docs/ to GitHub Pages.
+#
+# Triggered by the same vX.Y.Z tag that cuts a release, so the website always
+# describes a version that exists. Use the manual run to preview a docs change
+# without tagging.
+#
+# The Pages permissions are kept in their own workflow rather than folded into
+# release.yml, so the job that can write releases never also holds a Pages
+# deployment token.
+name: Pages
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a queued run supersedes an older one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy the website
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/configure-pages@v6
+        with:
+          # First release can create the Pages site; later runs are idempotent.
+          enablement: true
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs
+          # Since v4 this action drops dotfiles, which would silently leave
+          # docs/.nojekyll out of the artifact and hand the site back to
+          # Jekyll -- it would then ignore any file or directory starting
+          # with an underscore.
+          include-hidden-files: true
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5

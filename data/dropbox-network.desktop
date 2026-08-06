@@ -2,5 +2,5 @@
 Type=Link
 Name=Dropbox
 Comment=Your Dropbox account
-Icon=folder-dropbox
+Icon=io.github.timpalpant.kio-dropbox
 URL=dropbox:/

@@ -49,31 +49,13 @@ public:
     static QString builtInAppKey();
 
     /*! Whether the user supplied a key of their own, overriding the built-in. */
-    bool hasCustomAppKey() const
-    {
-        return !m_appKey.isEmpty();
-    }
-    QString refreshToken() const
-    {
-        return m_refreshToken;
-    }
-    QString accountEmail() const
-    {
-        return m_email;
-    }
-    QString accountName() const
-    {
-        return m_displayName;
-    }
+    bool hasCustomAppKey() const { return !m_appKey.isEmpty(); }
+    QString refreshToken() const { return m_refreshToken; }
+    QString accountEmail() const { return m_email; }
+    QString accountName() const { return m_displayName; }
 
-    void setAppKey(const QString &key)
-    {
-        m_appKey = key;
-    }
-    void setRefreshToken(const QString &token)
-    {
-        m_refreshToken = token;
-    }
+    void setAppKey(const QString &key) { m_appKey = key; }
+    void setRefreshToken(const QString &token) { m_refreshToken = token; }
     void setAccountInfo(const QString &email, const QString &displayName);
 
     /*!

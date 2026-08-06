@@ -25,8 +25,7 @@
 
 using namespace Qt::StringLiterals;
 
-namespace
-{
+namespace {
 constexpr auto WalletFolder = "kio-dropbox";
 constexpr auto WalletKey = "refresh-token";
 

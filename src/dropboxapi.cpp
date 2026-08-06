@@ -18,8 +18,7 @@
 
 using namespace Qt::StringLiterals;
 
-namespace
-{
+namespace {
 constexpr int RequestTimeoutMs = 120'000;
 constexpr int MaxRetries = 4;
 
@@ -263,9 +262,7 @@ bool DropboxApi::send(const QString &url,
         }
 
         // Likewise for uploads: as long as bytes are moving, don't time out.
-        QObject::connect(reply, &QNetworkReply::uploadProgress, reply, [&] {
-            timeout.start(RequestTimeoutMs);
-        });
+        QObject::connect(reply, &QNetworkReply::uploadProgress, reply, [&] { timeout.start(RequestTimeoutMs); });
 
         timeout.start(RequestTimeoutMs);
         loop.exec();

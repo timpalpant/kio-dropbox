@@ -2,7 +2,7 @@
     "KDE-KIO-Protocols": {
         "dropbox": {
             "Class": ":internet",
-            "Icon": "folder-dropbox",
+            "Icon": "io.github.timpalpant.kio-dropbox",
             "protocol": "dropbox",
             "input": "none",
             "output": "filesystem",

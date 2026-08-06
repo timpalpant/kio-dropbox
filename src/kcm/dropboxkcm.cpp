@@ -34,10 +34,7 @@ public:
         layout->addWidget(m_setup);
     }
 
-    void load() override
-    {
-        m_setup->refresh();
-    }
+    void load() override { m_setup->refresh(); }
 
 private:
     SetupWidget *m_setup;

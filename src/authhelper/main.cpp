@@ -18,8 +18,7 @@
 
 using namespace Qt::StringLiterals;
 
-namespace
-{
+namespace {
 /*! The same UI as the System Settings module, in a window of its own. */
 QDialog *buildDialog()
 {
@@ -42,7 +41,7 @@ int main(int argc, char **argv)
     QApplication app(argc, argv);
     QApplication::setApplicationName("kio-dropbox-auth"_L1);
     QApplication::setApplicationVersion("0.1.0"_L1);
-    QApplication::setWindowIcon(QIcon::fromTheme("folder-dropbox"_L1));
+    QApplication::setWindowIcon(QIcon::fromTheme("io.github.timpalpant.kio-dropbox"_L1));
 
     KLocalizedString::setApplicationDomain("kio6_dropbox");
 
@@ -52,9 +51,7 @@ int main(int argc, char **argv)
     parser.addVersionOption();
 
     QCommandLineOption statusOption("status"_L1, i18n("Print whether an account is linked and exit."));
-    QCommandLineOption sidebarOption("sidebar"_L1,
-                                     i18n("Add or remove the Dropbox entry in the file manager sidebar, then exit."),
-                                     "show|hide"_L1);
+    QCommandLineOption sidebarOption("sidebar"_L1, i18n("Add or remove the Dropbox entry in the file manager sidebar, then exit."), "show|hide"_L1);
     parser.addOption(statusOption);
     parser.addOption(sidebarOption);
     parser.process(app);
@@ -72,8 +69,7 @@ int main(int argc, char **argv)
     if (parser.isSet(statusOption)) {
         DropboxAccount account;
         QTextStream out(stdout);
-        out << (DropboxPlaces::isShown() ? i18n("Shown in the file manager sidebar.") : i18n("Not in the file manager sidebar."))
-            << Qt::endl;
+        out << (DropboxPlaces::isShown() ? i18n("Shown in the file manager sidebar.") : i18n("Not in the file manager sidebar.")) << Qt::endl;
         if (account.isConfigured()) {
             const QString who = account.accountEmail().isEmpty() ? account.accountName() : account.accountEmail();
             out << i18n("Linked to %1.", who) << Qt::endl;

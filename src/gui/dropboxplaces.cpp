@@ -12,8 +12,7 @@
 
 using namespace Qt::StringLiterals;
 
-namespace
-{
+namespace {
 QUrl placeUrl()
 {
     return QUrl("dropbox:/"_L1);
@@ -46,7 +45,7 @@ void DropboxPlaces::setShown(bool shown)
     if (shown && !existing.isValid()) {
         // An empty appName makes the entry visible in every application rather
         // than only the one that created it.
-        model.addPlace(i18n("Dropbox"), placeUrl(), "folder-dropbox"_L1, QString());
+        model.addPlace(i18n("Dropbox"), placeUrl(), "io.github.timpalpant.kio-dropbox"_L1, QString());
     } else if (!shown && existing.isValid()) {
         model.removePlace(existing);
     }

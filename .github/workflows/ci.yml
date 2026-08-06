@@ -1,0 +1,237 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # kde-cli-tools supplies kioclient, which the integration suite drives.
+  ARCH_PACKAGES: >-
+    base-devel cmake ninja git
+    qt6-base kio kwallet kcmutils ki18n kcoreaddons
+    kconfig kconfigwidgets kwidgetsaddons
+    kde-cli-tools python
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    # KDE Frameworks 6 is packaged far more currently on Arch than on the
+    # runner's Ubuntu, and Arch is the primary target anyway.
+    container: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm --needed ${{ env.ARCH_PACKAGES }}
+
+      - uses: actions/checkout@v7
+
+      - name: Trust the workspace
+        # The container runs as root while the checkout is owned by the runner
+        # user, which git otherwise refuses to touch.
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Configure
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DBUILD_TESTING=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        # The suite runs the real worker against tests/fake_dropbox.py, so it
+        # needs no display, no network and no Dropbox account. run_tests.sh
+        # forces the offscreen Qt platform for the same reason.
+        run: ctest --test-dir build --output-on-failure --no-tests=error
+
+      - name: Verify the install tree
+        run: |
+          DESTDIR="$PWD/staging" cmake --install build
+          find staging -type f | sort
+          # KIO finds the worker by directory layout and file name, and the
+          # desktop entry's Icon= must resolve to an installed icon. Both are
+          # silent failures at runtime, so assert them here.
+          test -f staging/usr/lib/qt6/plugins/kf6/kio/dropbox.so
+          test -f staging/usr/lib/qt6/plugins/plasma/kcms/systemsettings_qwidgets/kcm_dropbox.so
+          test -f staging/usr/bin/kio-dropbox-auth
+          test -f staging/usr/share/applications/io.github.timpalpant.kio-dropbox.desktop
+          test -f staging/usr/share/metainfo/io.github.timpalpant.kio-dropbox.metainfo.xml
+          test -f staging/usr/share/icons/hicolor/scalable/apps/io.github.timpalpant.kio-dropbox.svg
+          test -f staging/usr/share/remoteview/dropbox-network.desktop
+
+  lint:
+    name: Metadata
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm --needed git appstream desktop-file-utils
+
+      - uses: actions/checkout@v7
+
+      - name: Validate the desktop entries
+        run: |
+          desktop-file-validate data/io.github.timpalpant.kio-dropbox.desktop
+          # A Type=Link entry is not a launcher, so the "missing Exec" and
+          # "not in any category" checks do not apply to it.
+          desktop-file-validate --no-warn-deprecated data/dropbox-network.desktop || true
+
+      - name: Validate the AppStream metadata
+        # --no-net because the checks that hit the network are flaky in CI and
+        # would fail on URLs that are fine but rate-limited.
+        run: appstreamcli validate --no-net data/io.github.timpalpant.kio-dropbox.metainfo.xml
+
+  format:
+    name: Formatting
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm --needed git clang
+
+      - uses: actions/checkout@v7
+
+      - name: Check clang-format
+        run: |
+          find src \( -name '*.cpp' -o -name '*.h' \) -print0 \
+            | xargs -0 clang-format --dry-run --Werror
+
+  packaging:
+    name: Packaging files
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm --needed base-devel git pacman-contrib
+
+      - uses: actions/checkout@v7
+
+      - name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Lint the PKGBUILDs
+        run: |
+          useradd -m builder
+          chown -R builder .
+          for dir in packaging/arch/*/; do
+            echo "== $dir"
+            bash -n "$dir/PKGBUILD"
+            su builder -c "cd '$dir' && makepkg --printsrcinfo > /dev/null"
+          done
+
+      # The release package downloads a fixed tarball, so it has to verify it.
+      # SKIP belongs only to kio-dropbox-git, whose source is a git checkout.
+      - name: Check the release tarball is pinned by digest
+        run: |
+          if grep -q "^sha256sums=('SKIP')" packaging/arch/kio-dropbox/PKGBUILD; then
+            echo "::error::packaging/arch/kio-dropbox/PKGBUILD downloads a tarball without checking it"
+            exit 1
+          fi
+
+      # The app key placeholder must not be committed filled in: it is stamped
+      # into the packaging files only when a package is actually built.
+      # --check reports rather than fails, so the result is asserted here.
+      - name: Check the app key placeholder is empty
+        run: |
+          ./packaging/fill-credentials.sh --check | tee creds.txt
+          if grep -q '^filled:' creds.txt; then
+            echo "::error::Packaging files have an app key committed; run packaging/fill-credentials.sh --clear"
+            exit 1
+          fi
+
+      # Builds the pacman package the release ships, from this commit, so a
+      # broken PKGBUILD surfaces here rather than while cutting a release.
+      - name: Build the pacman package
+        run: ./packaging/build-arch-package.sh --outdir "$PWD/dist"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: kio-dropbox-pacman-package
+          path: dist/*.pkg.tar.zst
+          if-no-files-found: error
+
+  deb:
+    name: Debian package
+    runs-on: ubuntu-latest
+    container: debian:trixie
+    steps:
+      - name: Install dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates cmake ninja-build g++ git dpkg-dev file \
+            qt6-base-dev \
+            libkf6kio-dev libkf6wallet-dev libkf6kcmutils-dev \
+            libkf6i18n-dev libkf6coreaddons-dev libkf6config-dev \
+            libkf6configwidgets-dev libkf6widgetsaddons-dev
+
+      - uses: actions/checkout@v7
+
+      - name: Build the package
+        env:
+          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DBUILD_TESTING=OFF \
+            -DDROPBOX_APP_KEY="$DROPBOX_APP_KEY"
+          cmake --build build
+          cpack --config build/CPackConfig.cmake -G DEB -B "$PWD/dist"
+          for package in dist/*.deb; do sha256sum "$package" > "$package.sha256"; done
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: kio-dropbox-deb-package
+          path: |
+            dist/*.deb
+            dist/*.deb.sha256
+          if-no-files-found: error
+
+  rpm:
+    name: RPM package
+    runs-on: ubuntu-latest
+    container: registry.fedoraproject.org/fedora:latest
+    steps:
+      - name: Install dependencies
+        run: |
+          dnf -y install \
+            cmake ninja-build gcc-c++ git rpm-build \
+            qt6-qtbase-devel \
+            kf6-kio-devel kf6-kwallet-devel kf6-kcmutils-devel \
+            kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel \
+            kf6-kconfigwidgets-devel kf6-kwidgetsaddons-devel
+          dnf clean all
+
+      - uses: actions/checkout@v7
+
+      - name: Build the package
+        env:
+          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DBUILD_TESTING=OFF \
+            -DDROPBOX_APP_KEY="$DROPBOX_APP_KEY"
+          cmake --build build
+          cpack --config build/CPackConfig.cmake -G RPM -B "$PWD/dist"
+          for package in dist/*.rpm; do sha256sum "$package" > "$package.sha256"; done
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: kio-dropbox-rpm-package
+          path: |
+            dist/*.rpm
+            dist/*.rpm.sha256
+          if-no-files-found: error

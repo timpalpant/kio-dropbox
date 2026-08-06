@@ -43,6 +43,10 @@ EOF
 printf 'fake-refresh-token' > "$XDG_CONFIG_HOME/kio-dropbox/refresh-token"
 
 export KIO_DROPBOX_NO_WALLET=1
+# Everything here is a Qt GUI application under the hood, kioclient included.
+# Rendering offscreen keeps the suite runnable on a headless CI container and
+# stops windows flashing up during a local run.
+export QT_QPA_PLATFORM=offscreen
 export KIO_DROPBOX_API_BASE="$BASE/2/"
 export KIO_DROPBOX_CONTENT_BASE="$BASE/content/2/"
 export KIO_DROPBOX_TOKEN_ENDPOINT="$BASE/oauth2/token"
@@ -188,7 +192,7 @@ check "retries after HTTP 429" "hello from dropbox" "$out"
 
 # These run offscreen against the sandboxed XDG_DATA_HOME above, so the real
 # Places sidebar is never touched.
-auth() { QT_QPA_PLATFORM=offscreen timeout 60 "$AUTH" "$@" 2>&1; }
+auth() { timeout 60 "$AUTH" "$@" 2>&1; }
 # grep -c prints 0 and *also* exits non-zero when there are no matches, so the
 # exit status has to be swallowed rather than treated as "no file".
 places_count() {

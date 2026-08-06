@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>kio-dropbox — browse Dropbox in Dolphin</title>
+<meta name="description" content="kio-dropbox is a KIO worker that makes a Dropbox account browsable as dropbox:/ in Dolphin and every other KDE application.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+
+<meta property="og:title" content="kio-dropbox">
+<meta property="og:description" content="Browse Dropbox as dropbox:/ in Dolphin — no proprietary client, nothing synced to disk.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://timpalpant.github.io/kio-dropbox/">
+<meta property="og:image" content="https://timpalpant.github.io/kio-dropbox/icon.svg">
+
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #fbfbfc;
+    --surface: #ffffff;
+    --border: #e2e4e8;
+    --text: #1b1d21;
+    --muted: #5c6370;
+    --accent: #1d76a8;
+    --accent-hover: #3daee9;
+    --code-bg: #f2f3f5;
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181c;
+      --surface: #1d2025;
+      --border: #2c3038;
+      --text: #eceff4;
+      --muted: #9aa1ad;
+      --accent: #3daee9;
+      --accent-hover: #6dc7f5;
+      --code-bg: #22262c;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---- hero ---- */
+  header { padding: 72px 0 56px; text-align: center; }
+  header img { width: 112px; height: 112px; }
+  h1 {
+    margin: 20px 0 8px;
+    font-size: 2.75rem;
+    letter-spacing: -0.02em;
+  }
+  .tagline { margin: 0 auto; max-width: 40ch; color: var(--muted); font-size: 1.15rem; }
+
+  .badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  .badges img { width: auto; height: 20px; }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 32px;
+  }
+  .btn {
+    display: inline-block;
+    padding: 11px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 600;
+    transition: border-color .15s, transform .15s;
+  }
+  .btn:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+  /* ---- sections ---- */
+  section { padding: 40px 0; border-top: 1px solid var(--border); }
+  h2 { font-size: 1.4rem; margin: 0 0 20px; letter-spacing: -0.01em; }
+  h3 { font-size: 1rem; margin: 24px 0 8px; }
+
+  .features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+  .features li {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+  }
+  .features strong { display: block; margin-bottom: 4px; }
+  .features span { color: var(--muted); font-size: .95rem; }
+
+  .screenshots {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  .screenshots figure {
+    margin: 0;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .screenshots img { display: block; width: 100%; height: auto; }
+  .screenshots figcaption {
+    padding: 10px 14px;
+    color: var(--muted);
+    font-size: .9rem;
+  }
+  .screenshot-trigger {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: zoom-in;
+  }
+  .screenshot-trigger:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: -3px;
+  }
+  .screenshot-dialog {
+    width: min(96vw, 1280px);
+    max-width: calc(100vw - 32px);
+    max-height: 96vh;
+    margin: auto;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+  }
+  .screenshot-dialog::backdrop { background: rgb(0 0 0 / .72); }
+  .screenshot-dialog form {
+    display: flex;
+    justify-content: flex-end;
+    margin: 0 0 8px;
+  }
+  .screenshot-dialog__close {
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 1.4rem;
+    line-height: 1;
+  }
+  .screenshot-dialog__close:hover { border-color: var(--accent); }
+  .screenshot-dialog__close:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .screenshot-dialog img {
+    display: block;
+    max-width: 100%;
+    max-height: calc(90vh - 5rem);
+    margin: 0 auto;
+    object-fit: contain;
+  }
+  .screenshot-dialog p {
+    margin: 8px 4px 0;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-size: .9rem;
+    line-height: 1.5;
+  }
+  code { font-family: ui-monospace, "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace; }
+  p code, li code { background: var(--code-bg); padding: 2px 6px; border-radius: 4px; font-size: .9em; }
+
+  a { color: var(--accent); }
+
+  .note {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 14px 18px;
+    color: var(--muted);
+    font-size: .95rem;
+  }
+
+  ul.plain { padding-left: 20px; color: var(--muted); }
+  ul.plain li { margin: 6px 0; }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 0 56px;
+    color: var(--muted);
+    font-size: .9rem;
+    text-align: center;
+  }
+  footer p { margin: 6px 0; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <img src="icon.svg" alt="">
+    <h1>kio-dropbox</h1>
+    <p class="tagline">Browse Dropbox as <code>dropbox:/</code> in Dolphin. No proprietary client, nothing synced to disk.</p>
+
+    <div class="badges">
+      <a href="https://github.com/timpalpant/kio-dropbox/actions/workflows/ci.yml"><img
+        src="https://img.shields.io/github/actions/workflow/status/timpalpant/kio-dropbox/ci.yml?branch=master&amp;label=CI&amp;logo=github"
+        alt="CI status"></a>
+      <a href="https://github.com/timpalpant/kio-dropbox/releases"><img
+        src="https://img.shields.io/github/v/release/timpalpant/kio-dropbox?include_prereleases&amp;label=release&amp;logo=github"
+        alt="Latest release"></a>
+      <a href="https://github.com/timpalpant/kio-dropbox/blob/master/LICENSE"><img
+        src="https://img.shields.io/badge/license-GPL--2.0--or--later-blue"
+        alt="License"></a>
+    </div>
+
+    <div class="actions">
+      <a class="btn primary" href="https://github.com/timpalpant/kio-dropbox/releases">Download the latest release</a>
+      <a class="btn" href="https://github.com/timpalpant/kio-dropbox">Source on GitHub</a>
+    </div>
+  </header>
+
+  <section>
+    <h2>Screenshots</h2>
+    <div class="screenshots">
+      <figure>
+        <button class="screenshot-trigger" type="button" aria-haspopup="dialog" aria-label="Enlarge the settings page" data-caption="Linking an account in System Settings">
+          <img src="screenshots/settings.png" alt="The Dropbox page in System Settings, showing a linked account">
+        </button>
+        <figcaption>Linking an account in System Settings</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>What it does</h2>
+    <ul class="features">
+      <li>
+        <strong>Dropbox in your file manager</strong>
+        <span>Browse, open, save, rename and delete at <code>dropbox:/</code> — in Dolphin, in file dialogs, anywhere KDE opens a URL.</span>
+      </li>
+      <li>
+        <strong>Nothing on disk</strong>
+        <span>Folders are listed on demand and files stream as they are opened. No sync daemon, no second copy of your data.</span>
+      </li>
+      <li>
+        <strong>Server-side moves and copies</strong>
+        <span>Rearranging files inside Dropbox transfers no data at all — the API does it in place.</span>
+      </li>
+      <li>
+        <strong>Large uploads</strong>
+        <span>Anything past one chunk streams through a Dropbox upload session, so a big file never has to fit in memory.</span>
+      </li>
+      <li>
+        <strong>A sidebar entry</strong>
+        <span>Dropbox appears under <em>Remote</em> in the Places panel, and one checkbox takes it back out.</span>
+      </li>
+      <li>
+        <strong>Set up where you'd expect</strong>
+        <span>System Settings → Network → Settings → Dropbox. Sign-in is OAuth with PKCE; the token lives in KWallet.</span>
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Getting started</h2>
+
+    <h3>Arch Linux</h3>
+    <p>
+      Download <code>kio-dropbox-*.pkg.tar.zst</code> from the
+      <a href="https://github.com/timpalpant/kio-dropbox/releases">latest release</a>,
+      then:
+    </p>
+<pre><code>sudo pacman -U kio-dropbox-*.pkg.tar.zst</code></pre>
+
+    <h3>Debian / Ubuntu</h3>
+    <p>
+      Download <code>kio-dropbox_*.deb</code> from the
+      <a href="https://github.com/timpalpant/kio-dropbox/releases">latest release</a>,
+      then:
+    </p>
+<pre><code>sudo apt install ./kio-dropbox_*.deb</code></pre>
+
+    <h3>Fedora / RPM-based distributions</h3>
+    <p>
+      Download <code>kio-dropbox-*.rpm</code> from the
+      <a href="https://github.com/timpalpant/kio-dropbox/releases">latest release</a>,
+      then:
+    </p>
+<pre><code>sudo dnf install ./kio-dropbox-*.rpm</code></pre>
+
+    <h3>From source</h3>
+<pre><code>git clone https://github.com/timpalpant/kio-dropbox.git
+cd kio-dropbox
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+cmake --build build
+sudo cmake --install build</code></pre>
+
+    <p>
+      You will need Qt&nbsp;6 and KDE Frameworks&nbsp;6 (KIO, KWallet, KCMUtils,
+      KI18n, KCoreAddons, KConfigWidgets, KWidgetsAddons). The full list is in the
+      <a href="https://github.com/timpalpant/kio-dropbox#building">README</a>.
+      <code>extra-cmake-modules</code> is deliberately not required.
+    </p>
+
+    <p class="note">
+      Log out and back in after installing, so running applications pick up the
+      new protocol and settings page. Then open <strong>System Settings →
+      Network → Settings → Dropbox</strong> to link an account.
+    </p>
+
+    <h3>Why there is no Flatpak</h3>
+    <p>
+      A KIO worker is only useful to applications that can load it, and a
+      Flatpak's plugins live inside its own sandbox — the host's Dolphin would
+      never see <code>dropbox:/</code>. This has to be a host package.
+    </p>
+  </section>
+
+  <section>
+    <h2>How it is tested</h2>
+    <p>
+      <code>tests/fake_dropbox.py</code> implements enough of the Dropbox v2 API
+      to drive the worker, and the suite runs the real, built worker against it
+      through <code>kioclient</code> — so what CI exercises is the same binary
+      you install, not a mock of it.
+    </p>
+    <ul class="plain">
+      <li>Folder listings that paginate across thousands of entries, and non-ASCII names.</li>
+      <li>Streaming reads, and 20&nbsp;MiB chunked uploads round-tripped byte for byte.</li>
+      <li>Server-side move and copy, recursive delete, and overwrite semantics.</li>
+      <li>Expired access tokens and HTTP&nbsp;429 rate limiting, both recovered from.</li>
+      <li>The sidebar entry being added, not duplicated, and removed.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Contributing</h2>
+    <p>
+      Bug reports and patches are welcome — see
+      <a href="https://github.com/timpalpant/kio-dropbox/issues">issues</a> and
+      <a href="https://github.com/timpalpant/kio-dropbox/pulls">pull requests</a>.
+      kio-dropbox is free software under the GPL-2.0-or-later.
+    </p>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>
+      kio-dropbox is an independent project. It is not affiliated with, endorsed
+      by, or sponsored by Dropbox, Inc. &ldquo;Dropbox&rdquo; is a trademark of
+      Dropbox, Inc., referred to here only to describe the service this software
+      interoperates with.
+    </p>
+    <p>© 2026 the kio-dropbox authors · GPL-2.0-or-later</p>
+  </div>
+</footer>
+
+<dialog class="screenshot-dialog" id="screenshot-dialog" aria-labelledby="screenshot-dialog-caption">
+  <form method="dialog">
+    <button class="screenshot-dialog__close" type="submit" aria-label="Close enlarged screenshot">&times;</button>
+  </form>
+  <img alt="">
+  <p id="screenshot-dialog-caption"></p>
+</dialog>
+
+<script>
+  (() => {
+    const dialog = document.querySelector('#screenshot-dialog');
+    if (!dialog || typeof dialog.showModal !== 'function') return;
+
+    const image = dialog.querySelector('img');
+    const caption = dialog.querySelector('#screenshot-dialog-caption');
+    const closeButton = dialog.querySelector('.screenshot-dialog__close');
+    let trigger;
+
+    document.querySelectorAll('.screenshot-trigger').forEach((button) => {
+      button.addEventListener('click', () => {
+        const thumbnail = button.querySelector('img');
+        trigger = button;
+        image.src = thumbnail.currentSrc || thumbnail.src;
+        image.alt = thumbnail.alt;
+        caption.textContent = button.dataset.caption || thumbnail.alt;
+        dialog.showModal();
+        closeButton.focus();
+      });
+    });
+
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+    dialog.addEventListener('close', () => {
+      image.removeAttribute('src');
+      trigger?.focus();
+    });
+  })();
+</script>
+
+</body>
+</html>

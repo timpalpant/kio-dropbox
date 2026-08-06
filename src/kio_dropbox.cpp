@@ -25,8 +25,7 @@
 using namespace Qt::StringLiterals;
 using namespace KIO;
 
-namespace
-{
+namespace {
 /*! Upload chunk size. Dropbox requires session chunks to be a multiple of 4 MiB. */
 constexpr qint64 UploadChunkSize = 8 * 1024 * 1024;
 
@@ -123,8 +122,7 @@ private:
 DropboxWorker::DropboxWorker(const QByteArray &pool, const QByteArray &app)
     : WorkerBase("dropbox", pool, app)
     , m_api(&m_account)
-{
-}
+{}
 
 // --- account -----------------------------------------------------------------
 
@@ -170,7 +168,7 @@ UDSEntry DropboxWorker::rootEntry() const
     entry.fastInsert(UDSEntry::UDS_FILE_TYPE, S_IFDIR);
     entry.fastInsert(UDSEntry::UDS_ACCESS, S_IRWXU);
     entry.fastInsert(UDSEntry::UDS_MIME_TYPE, "inode/directory"_L1);
-    entry.fastInsert(UDSEntry::UDS_ICON_NAME, "folder-dropbox"_L1);
+    entry.fastInsert(UDSEntry::UDS_ICON_NAME, "io.github.timpalpant.kio-dropbox"_L1);
     return entry;
 }
 

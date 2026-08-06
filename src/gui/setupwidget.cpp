@@ -27,12 +27,11 @@
 
 using namespace Qt::StringLiterals;
 
-namespace
-{
+namespace {
 enum Page {
     LinkedPage,
     ConnectPage, //!< shown when the build has an app key of its own
-    AppKeyPage, //!< shown when it doesn't, or when the user wants their own
+    AppKeyPage,  //!< shown when it doesn't, or when the user wants their own
     AuthorizePage,
 };
 
@@ -110,9 +109,7 @@ QWidget *SetupWidget::buildLinkedPage()
     layout->addWidget(new QLabel(i18n("Dropbox is available in Dolphin at <b>dropbox:/</b>."), page));
 
     m_showInSidebar = new QCheckBox(i18n("Show Dropbox in the file manager sidebar"), page);
-    connect(m_showInSidebar, &QCheckBox::toggled, this, [](bool checked) {
-        DropboxPlaces::setShown(checked);
-    });
+    connect(m_showInSidebar, &QCheckBox::toggled, this, [](bool checked) { DropboxPlaces::setShown(checked); });
     layout->addWidget(m_showInSidebar);
 
     auto *unlinkButton = new QPushButton(i18n("Unlink This Account"), page);

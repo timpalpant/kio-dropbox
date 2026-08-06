@@ -1,0 +1,61 @@
+# Maintainer: Timothy Palpant <tim@palpant.us>
+
+pkgname=kio-dropbox-git
+_pkgname=kio-dropbox
+pkgver=0.1.0.r0.g0000000
+pkgrel=1
+pkgdesc='KIO worker that makes Dropbox browsable as dropbox:/ in Dolphin (git)'
+arch=('x86_64' 'aarch64')
+url='https://github.com/timpalpant/kio-dropbox'
+license=('GPL-2.0-or-later')
+
+depends=(
+  'qt6-base'
+  'kio'
+  'kwallet'
+  'kcmutils'
+  'ki18n'
+  'kcoreaddons'
+  'kconfig'
+  'kconfigwidgets'
+  'kwidgetsaddons'
+  'hicolor-icon-theme'
+)
+
+makedepends=('cmake' 'ninja' 'git')
+checkdepends=('kde-cli-tools' 'python')
+
+provides=("$_pkgname=$pkgver")
+conflicts=("$_pkgname")
+
+# SKIP is correct here and only here: the source is a git checkout, whose
+# revision is what pkgver() records, not a fixed tarball to verify.
+source=("$_pkgname::git+$url.git")
+sha256sums=('SKIP')
+
+# See the release PKGBUILD for why there is a key and no secret.
+_dropbox_app_key=''
+
+pkgver() {
+  cd "$_pkgname"
+  git describe --long --tags --abbrev=7 2>/dev/null \
+    | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g' \
+    || printf "0.0.0.r%s.g%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+}
+
+build() {
+  cmake -B build -S "$_pkgname" -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DBUILD_TESTING=ON \
+    -DDROPBOX_APP_KEY="$_dropbox_app_key"
+  cmake --build build
+}
+
+check() {
+  ctest --test-dir build --output-on-failure --no-tests=error
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 Tim Palpant -->
+<component type="desktop-application">
+  <id>io.github.timpalpant.kio-dropbox</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-2.0-or-later</project_license>
+
+  <name>Dropbox for Dolphin</name>
+  <summary>Browse Dropbox as dropbox:/ in Dolphin and other KDE applications</summary>
+
+  <developer id="io.github.timpalpant">
+    <name>Tim Palpant</name>
+  </developer>
+
+  <description>
+    <p>
+      A KIO worker that makes a Dropbox account browsable at dropbox:/ in
+      Dolphin, in file dialogs, and in every other KDE application.
+      It talks to the Dropbox HTTP API directly, so no
+      proprietary client runs and nothing is synchronized to disk: folders are
+      listed on demand and files are streamed as they are opened.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Browse, read, write, rename and delete, straight from the file manager</li>
+      <li>Moves and copies within Dropbox happen server-side, transferring no data</li>
+      <li>Large uploads stream through chunked upload sessions</li>
+      <li>Free space is reported in Dolphin's status bar</li>
+      <li>A Dropbox entry in the file manager sidebar, which you can turn off</li>
+      <li>Account setup in System Settings, under Network</li>
+    </ul>
+    <p>
+      Sign-in uses OAuth with PKCE. The long-lived token is kept in KWallet,
+      never in plain text unless no wallet is available, and the short-lived
+      access token lives only in the runtime directory.
+    </p>
+    <p>
+      This is an independent project, not affiliated with, endorsed by, or
+      sponsored by Dropbox, Inc. "Dropbox" is a trademark of Dropbox, Inc.,
+      referred to here only to describe the service this software
+      interoperates with.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.timpalpant.kio-dropbox.desktop</launchable>
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://timpalpant.github.io/kio-dropbox/screenshots/settings.png</image>
+      <caption>Linking an account in System Settings</caption>
+    </screenshot>
+  </screenshots>
+
+  <url type="homepage">https://timpalpant.github.io/kio-dropbox/</url>
+  <url type="bugtracker">https://github.com/timpalpant/kio-dropbox/issues</url>
+  <url type="vcs-browser">https://github.com/timpalpant/kio-dropbox</url>
+  <url type="contribute">https://github.com/timpalpant/kio-dropbox</url>
+
+  <provides>
+    <binary>kio-dropbox-auth</binary>
+  </provides>
+
+  <categories>
+    <category>Utility</category>
+    <category>Network</category>
+  </categories>
+
+  <keywords>
+    <keyword>dropbox</keyword>
+    <keyword>cloud</keyword>
+    <keyword>storage</keyword>
+    <keyword>kio</keyword>
+    <keyword>dolphin</keyword>
+    <keyword>filesystem</keyword>
+  </keywords>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#a8d8f0</color>
+    <color type="primary" scheme_preference="dark">#1d76a8</color>
+  </branding>
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.1.0" date="2026-08-06" type="development">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

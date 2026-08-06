@@ -1,7 +1,7 @@
 {
     "KPlugin": {
         "Description": "Link a Dropbox account for browsing as dropbox:/",
-        "Icon": "folder-dropbox",
+        "Icon": "io.github.timpalpant.kio-dropbox",
         "Name": "Dropbox"
     },
     "X-DocPath": "kcontrol6/dropbox/index.html",

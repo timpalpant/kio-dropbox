@@ -13,11 +13,10 @@
  * windows without a restart. There is no separate setting for this: whether the
  * entry exists *is* the setting.
  */
-namespace DropboxPlaces
-{
+namespace DropboxPlaces {
 /*! Whether dropbox:/ currently has an entry in the Places sidebar. */
 bool isShown();
 
 /*! Adds or removes the dropbox:/ entry. Does nothing if already in that state. */
 void setShown(bool shown);
-}
+} // namespace DropboxPlaces

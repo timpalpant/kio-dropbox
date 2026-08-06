@@ -1,0 +1,64 @@
+# Maintainer: Timothy Palpant <tim@palpant.us>
+
+pkgname=kio-dropbox
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='KIO worker that makes Dropbox browsable as dropbox:/ in Dolphin'
+arch=('x86_64' 'aarch64')
+url='https://github.com/timpalpant/kio-dropbox'
+license=('GPL-2.0-or-later')
+
+depends=(
+  'qt6-base'
+  'kio'
+  'kwallet'
+  'kcmutils'
+  'ki18n'
+  'kcoreaddons'
+  'kconfig'
+  'kconfigwidgets'
+  'kwidgetsaddons'
+  'hicolor-icon-theme'
+)
+
+makedepends=('cmake' 'ninja')
+
+# The suite drives the built worker through kioclient against a local stand-in
+# for the Dropbox API. It touches neither the network nor a Dropbox account.
+checkdepends=('kde-cli-tools' 'python')
+
+# The release asset built by .github/workflows/release.yml, not the archive
+# GitHub generates on demand: the uploaded file is immutable and its digest is
+# published alongside it, so there is a fixed value to check against.
+source=("$pkgname-$pkgver.tar.gz::$url/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz")
+# Never SKIP here. This is a fixed tarball, not a VCS checkout, so SKIP would
+# mean makepkg builds whatever the download happened to return. Take the value
+# from kio-dropbox-$pkgver.tar.gz.sha256 in the release; the release workflow
+# prints the line to paste. An unreplaced placeholder fails the build, which is
+# the point -- a wrong hash must stop the build, not be waved through.
+sha256sums=('REPLACE_WITH_RELEASE_SHA256')
+
+# Dropbox app key registered for this package. Sign-in uses PKCE, so there is
+# no client secret at all: under RFC 8252 a desktop application is a "public
+# client" and anything shipped in the binary can be extracted, which is exactly
+# why the flow is built not to need one. This value identifies the build.
+# Users who prefer their own registration can enter it in the setup dialog
+# without rebuilding.
+_dropbox_app_key=''
+
+build() {
+  cmake -B build -S "$pkgname-$pkgver" -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DBUILD_TESTING=ON \
+    -DDROPBOX_APP_KEY="$_dropbox_app_key"
+  cmake --build build
+}
+
+check() {
+  ctest --test-dir build --output-on-failure --no-tests=error
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}

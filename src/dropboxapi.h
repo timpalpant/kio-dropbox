@@ -23,7 +23,7 @@ class QNetworkRequest;
  */
 enum class DropboxErrorKind {
     None,
-    Network, //!< could not reach Dropbox, or the request timed out
+    Network,        //!< could not reach Dropbox, or the request timed out
     Authentication, //!< no linked account, or the refresh token was rejected
     NotFound,
     AlreadyExists,
@@ -40,17 +40,14 @@ struct DropboxError {
     QString text;
     QString tag; //!< Dropbox's own error_summary, when there was one
 
-    explicit operator bool() const
-    {
-        return kind != DropboxErrorKind::None;
-    }
+    explicit operator bool() const { return kind != DropboxErrorKind::None; }
 };
 
 /*! One file or folder, as far as a file manager is concerned. */
 struct DropboxEntry {
     bool isValid = false;
     bool isDir = false;
-    QString name; //!< the leaf name, in its display casing
+    QString name;        //!< the leaf name, in its display casing
     QString pathDisplay; //!< full Dropbox path, in its display casing
     qint64 size = 0;
     QDateTime modified;
@@ -75,10 +72,7 @@ public:
     DropboxApi(const DropboxApi &) = delete;
     DropboxApi &operator=(const DropboxApi &) = delete;
 
-    QNetworkAccessManager *networkAccessManager() const
-    {
-        return m_nam;
-    }
+    QNetworkAccessManager *networkAccessManager() const { return m_nam; }
 
     /*! Calls a JSON-in/JSON-out endpoint under https://api.dropboxapi.com/2/. */
     bool rpc(const QString &endpoint, const QJsonValue &args, QJsonObject *result, DropboxError *error);

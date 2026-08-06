@@ -40,12 +40,40 @@ set(KIO_DROPBOX_PLUGIN_DIR "${CMAKE_INSTALL_LIBDIR}/qt6/plugins"
 
 add_compile_definitions(TRANSLATION_DOMAIN="kio6_dropbox")
 
+option(BUILD_TESTING "Build and register the integration test suite" ON)
+
 add_subdirectory(src)
+
+if(BUILD_TESTING)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
 
 install(FILES data/dropbox-network.desktop
         DESTINATION ${CMAKE_INSTALL_DATADIR}/remoteview)
-install(FILES data/org.kde.kio-dropbox-auth.desktop
+install(FILES data/io.github.timpalpant.kio-dropbox.desktop
         DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+install(FILES data/io.github.timpalpant.kio-dropbox.metainfo.xml
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
+install(FILES data/io.github.timpalpant.kio-dropbox.svg
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
+
+# --- packaging ----------------------------------------------------------------
+
+set(CPACK_PACKAGE_NAME "kio-dropbox")
+set(CPACK_PACKAGE_VENDOR "Timothy Palpant")
+set(CPACK_PACKAGE_CONTACT "Timothy Palpant <tim@palpant.us>")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Browse Dropbox as dropbox:/ in Dolphin")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${CPACK_PACKAGE_CONTACT}")
+set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+set(CPACK_RPM_PACKAGE_LICENSE "GPL-2.0-or-later")
+set(CPACK_RPM_PACKAGE_GROUP "Applications/Internet")
+set(CPACK_RPM_PACKAGE_REQUIRES "kf6-kio, kf6-kwallet, kf6-kcmutils")
+set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
+include(CPack)
 
 message(STATUS "")
 message(STATUS "kio-dropbox ${PROJECT_VERSION}")
