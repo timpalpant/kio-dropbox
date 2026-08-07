@@ -122,6 +122,9 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 16px;
+    /* Grid items stretch to the tallest in the row by default, which leaves a
+       short screenshot padded out with dead space above its caption. */
+    align-items: start;
   }
   .screenshots figure {
     margin: 0;
@@ -262,16 +265,16 @@
     <h2>Screenshots</h2>
     <div class="screenshots">
       <figure>
-        <button class="screenshot-trigger" type="button" aria-haspopup="dialog" aria-label="Enlarge Dolphin browsing Dropbox" data-caption="Browsing Dropbox in Dolphin, with the sidebar entry under Remote">
-          <img src="screenshots/browsing.png" alt="Dolphin showing the contents of dropbox:/ with Dropbox selected in the Remote section of the sidebar">
-        </button>
-        <figcaption>Browsing Dropbox in Dolphin</figcaption>
-      </figure>
-      <figure>
         <button class="screenshot-trigger" type="button" aria-haspopup="dialog" aria-label="Enlarge the settings page" data-caption="Linking an account in System Settings">
           <img src="screenshots/settings.png" alt="The Dropbox page in System Settings, showing a linked account">
         </button>
         <figcaption>Linking an account in System Settings</figcaption>
+      </figure>
+      <figure>
+        <button class="screenshot-trigger" type="button" aria-haspopup="dialog" aria-label="Enlarge Dolphin browsing Dropbox" data-caption="Browsing Dropbox in Dolphin, with the sidebar entry under Remote">
+          <img src="screenshots/browsing.png" alt="Dolphin showing the contents of dropbox:/ with Dropbox selected in the Remote section of the sidebar">
+        </button>
+        <figcaption>Browsing Dropbox in Dolphin</figcaption>
       </figure>
     </div>
   </section>
@@ -344,7 +347,6 @@ sudo cmake --install build</code></pre>
       You will need Qt&nbsp;6 and KDE Frameworks&nbsp;6 (KIO, KWallet, KCMUtils,
       KI18n, KCoreAddons, KConfigWidgets, KWidgetsAddons). The full list is in the
       <a href="https://github.com/timpalpant/kio-dropbox#building">README</a>.
-      <code>extra-cmake-modules</code> is deliberately not required.
     </p>
 
     <p class="note">
@@ -353,29 +355,6 @@ sudo cmake --install build</code></pre>
       Network → Settings → Dropbox</strong> to link an account.
     </p>
 
-    <h3>Why there is no Flatpak</h3>
-    <p>
-      A KIO worker is only useful to applications that can load it, and a
-      Flatpak's plugins live inside its own sandbox — the host's Dolphin would
-      never see <code>dropbox:/</code>. This has to be a host package.
-    </p>
-  </section>
-
-  <section>
-    <h2>How it is tested</h2>
-    <p>
-      <code>tests/fake_dropbox.py</code> implements enough of the Dropbox v2 API
-      to drive the worker, and the suite runs the real, built worker against it
-      through <code>kioclient</code> — so what CI exercises is the same binary
-      you install, not a mock of it.
-    </p>
-    <ul class="plain">
-      <li>Folder listings that paginate across thousands of entries, and non-ASCII names.</li>
-      <li>Streaming reads, and 20&nbsp;MiB chunked uploads round-tripped byte for byte.</li>
-      <li>Server-side move and copy, recursive delete, and overwrite semantics.</li>
-      <li>Expired access tokens and HTTP&nbsp;429 rate limiting, both recovered from.</li>
-      <li>The sidebar entry being added, not duplicated, and removed.</li>
-    </ul>
   </section>
 
   <section>

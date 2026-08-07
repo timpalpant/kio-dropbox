@@ -91,8 +91,7 @@ Known limitations:
 Dependencies: Qt 6 (Core, Network, Gui, Widgets) and KDE Frameworks 6 (KIO,
 CoreAddons, I18n, Wallet, WidgetsAddons, ConfigWidgets, KCMUtils). On
 Arch/EndeavourOS these come from `qt6-base`, `kio`, `kwallet` and `kcmutils`,
-all of which a Plasma desktop already has. Notably *not* required is
-`extra-cmake-modules`, since the individual KF6 config files are self-contained.
+all of which a Plasma desktop already has.
 
 ```sh
 cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/usr
