@@ -123,8 +123,9 @@
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 16px;
     /* Grid items stretch to the tallest in the row by default, which leaves a
-       short screenshot padded out with dead space above its caption. */
-    align-items: start;
+       short screenshot padded out with dead space above its caption. Centering
+       instead keeps each figure its own height and balances the row. */
+    align-items: center;
   }
   .screenshots figure {
     margin: 0;
