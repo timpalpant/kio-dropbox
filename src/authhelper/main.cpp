@@ -28,8 +28,14 @@ QDialog *buildDialog()
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, dialog);
     QObject::connect(buttons, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
 
+    auto *setup = new SetupWidget(dialog);
+    // This window holds nothing but the setup widget, so it can shrink back down
+    // when a shorter page comes up. Inside System Settings that is not our call
+    // to make, which is why the widget signals rather than resizing itself.
+    QObject::connect(setup, &SetupWidget::contentSizeChanged, dialog, [dialog] { dialog->resize(dialog->sizeHint()); });
+
     auto *layout = new QVBoxLayout(dialog);
-    layout->addWidget(new SetupWidget(dialog));
+    layout->addWidget(setup);
     layout->addWidget(buttons);
 
     return dialog;

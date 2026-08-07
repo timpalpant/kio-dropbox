@@ -17,6 +17,7 @@
 #include <QGuiApplication>
 #include <QJsonObject>
 #include <QLabel>
+#include <QLayout>
 #include <QLineEdit>
 #include <QNetworkAccessManager>
 #include <QPushButton>
@@ -59,13 +60,14 @@ SetupWidget::SetupWidget(QWidget *parent)
     , m_nam(new QNetworkAccessManager(this))
 {
     // Wide enough that the numbered steps don't wrap into an unreadable column.
-    setMinimumWidth(560);
+    setMinimumWidth(480);
 
     m_pages = new QStackedWidget(this);
     m_pages->insertWidget(LinkedPage, buildLinkedPage());
     m_pages->insertWidget(ConnectPage, buildConnectPage());
     m_pages->insertWidget(AppKeyPage, buildAppKeyPage());
     m_pages->insertWidget(AuthorizePage, buildAuthorizePage());
+    connect(m_pages, &QStackedWidget::currentChanged, this, &SetupWidget::fitToCurrentPage);
 
     m_status = new QLabel(this);
     m_status->setWordWrap(true);
@@ -78,6 +80,38 @@ SetupWidget::SetupWidget(QWidget *parent)
     layout->addWidget(m_status);
 
     refresh();
+}
+
+void SetupWidget::fitToCurrentPage(int index)
+{
+    for (int i = 0; i < m_pages->count(); ++i) {
+        QWidget *page = m_pages->widget(i);
+        QSizePolicy policy = page->sizePolicy();
+        // Both directions: QStackedLayout::sizeHint() decides whether to skip a
+        // page by looking at its *horizontal* policy, so setting only the
+        // vertical one leaves the tallest page still driving the height.
+        const auto wanted = (i == index) ? QSizePolicy::Preferred : QSizePolicy::Ignored;
+        policy.setHorizontalPolicy(wanted);
+        policy.setVerticalPolicy(wanted);
+        page->setSizePolicy(policy);
+    }
+    // The size policies above fix minimumSizeHint, but QStackedWidget::sizeHint
+    // still reports the tallest page, and that is what adjustSize() reads.
+    // Capping the maximum height gets the honest number to the parent layout,
+    // which bounds a child's hint by its maximum size.
+    if (QWidget *page = m_pages->currentWidget()) {
+        int wanted = page->sizeHint().height();
+        if (QLayout *pageLayout = page->layout(); pageLayout && pageLayout->hasHeightForWidth()) {
+            // Word-wrapped labels are taller at narrow widths than their hint
+            // suggests, so ask what this page needs at the width it will get.
+            wanted = qMax(wanted, pageLayout->heightForWidth(qMax(m_pages->width(), minimumWidth())));
+        }
+        m_pages->setMaximumHeight(wanted);
+    }
+
+    m_pages->updateGeometry();
+    updateGeometry();
+    Q_EMIT contentSizeChanged();
 }
 
 int SetupWidget::startPage() const
@@ -94,6 +128,9 @@ void SetupWidget::refresh()
         m_appKeyEdit->setText(m_account.hasCustomAppKey() ? m_account.appKey() : QString());
         m_pages->setCurrentIndex(startPage());
     }
+    // setCurrentIndex() is silent when the page was already current, which it is
+    // on first show, so the initial fit has to be asked for directly.
+    fitToCurrentPage(m_pages->currentIndex());
 }
 
 QWidget *SetupWidget::buildLinkedPage()

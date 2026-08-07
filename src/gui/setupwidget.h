@@ -39,7 +39,22 @@ public:
     /*! Re-reads the stored account and shows the page that matches it. */
     void refresh();
 
+Q_SIGNALS:
+    /*!
+     * Emitted when switching pages changes how much room the content wants.
+     * A window that owns nothing but this widget can shrink to fit; the System
+     * Settings module deliberately ignores it, since it does not own its window.
+     */
+    void contentSizeChanged();
+
 private:
+    /*!
+     * Makes the stack report only the visible page's height. Without this it
+     * reserves room for its tallest page, so the two-line "linked" page would
+     * inherit the height of the app-key instructions.
+     */
+    void fitToCurrentPage(int index);
+
     QWidget *buildLinkedPage();
     QWidget *buildConnectPage();
     QWidget *buildAppKeyPage();
