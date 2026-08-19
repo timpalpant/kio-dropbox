@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if ! command -v clang-format >/dev/null 2>&1; then
+    echo "pre-commit: clang-format is required but was not found in PATH" >&2
+    exit 1
+fi
+
+staged_files=()
+while IFS= read -r -d '' file; do
+    staged_files+=("$file")
+done < <(
+    git diff --cached --name-only --diff-filter=ACMR -z -- \
+        '*.c' '*.cc' '*.cpp' '*.cxx' '*.h' '*.hh' '*.hpp' '*.hxx'
+)
+
+if ((${#staged_files[@]} == 0)); then
+    exit 0
+fi
+
+clang-format -i -- "${staged_files[@]}"
+git add -- "${staged_files[@]}"
