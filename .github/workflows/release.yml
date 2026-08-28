@@ -134,10 +134,12 @@ jobs:
         include:
           - arch: x86_64
             runner: ubuntu-latest
+            container: archlinux:latest
           - arch: aarch64
             runner: ubuntu-24.04-arm
+            container: menci/archlinuxarm:latest
     runs-on: ${{ matrix.runner }}
-    container: archlinux:latest
+    container: ${{ matrix.container }}
     steps:
       - name: Install dependencies
         run: pacman -Syu --noconfirm --needed base-devel git pacman-contrib sudo
