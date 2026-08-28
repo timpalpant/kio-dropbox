@@ -98,12 +98,13 @@ printf "\noptions=('!debug')\n" >> PKGBUILD
 # ---------------------------------------------------------------------------
 # -s installs missing dependencies, -f overwrites a previous build of the same
 # version.
-# Set PKGDEST explicitly: some Arch Linux ARM container images configure it
-# globally, which would otherwise place the finished package outside workdir.
-PKGDEST="$workdir" makepkg -sf --noconfirm --noprogressbar
+makepkg -sf --noconfirm --noprogressbar
 
 mkdir -p "$outdir"
-mv ./*.pkg.tar.zst "$outdir/"
+# Some Arch Linux ARM images set PKGDEST globally. Ask makepkg where it wrote
+# the artifacts instead of assuming they are in the current directory.
+mapfile -t packages < <(makepkg --packagelist)
+mv "${packages[@]}" "$outdir/"
 
 cd "$outdir"
 for pkg in *.pkg.tar.zst; do
