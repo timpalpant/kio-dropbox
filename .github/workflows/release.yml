@@ -126,13 +126,29 @@ jobs:
           if-no-files-found: error
 
   archpkg:
-    name: Arch package
+    name: Arch package (${{ matrix.arch }})
     needs: verify
-    runs-on: ubuntu-latest
-    container: archlinux:latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+            container: archlinux:latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            container: menci/archlinuxarm:latest
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
     steps:
+      - name: Configure the Arch Linux ARM container
+        if: matrix.arch == 'aarch64'
+        run: |
+          sed -i '/^\[options\]/a DisableSandbox' /etc/pacman.conf
+          sed -i "s/^PKGEXT=.*/PKGEXT='.pkg.tar.zst'/" /etc/makepkg.conf
+
       - name: Install dependencies
-        run: pacman -Syu --noconfirm --needed base-devel git pacman-contrib sudo
+        run: pacman -Syu --noconfirm --needed base-devel git pacman-contrib sudo zstd
 
       - uses: actions/checkout@v7
 
@@ -145,16 +161,24 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: arch-package
+          name: arch-package-${{ matrix.arch }}
           path: |
             dist/*.pkg.tar.zst
             dist/*.pkg.tar.zst.sha256
           if-no-files-found: error
 
   deb:
-    name: Debian package
+    name: Debian package (${{ matrix.arch }})
     needs: verify
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     container: debian:trixie
     steps:
       - name: Install dependencies
@@ -185,16 +209,24 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: deb-package
+          name: deb-package-${{ matrix.arch }}
           path: |
             dist/*.deb
             dist/*.deb.sha256
           if-no-files-found: error
 
   rpm:
-    name: RPM package
+    name: RPM package (${{ matrix.arch }})
     needs: verify
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     container: registry.fedoraproject.org/fedora:latest
     steps:
       - name: Install dependencies
@@ -221,7 +253,7 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: rpm-package
+          name: rpm-package-${{ matrix.arch }}
           path: |
             dist/*.rpm
             dist/*.rpm.sha256
@@ -249,6 +281,10 @@ jobs:
           files: artifacts/*
           body: |
             ### Install
+
+            Native packages are available for both x86_64/amd64 and
+            aarch64/arm64. Download the asset matching your machine before
+            using the commands below.
 
             **Arch Linux** — install the attached package directly:
 

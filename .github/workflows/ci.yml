@@ -105,12 +105,28 @@ jobs:
             | xargs -0 clang-format --dry-run --Werror
 
   packaging:
-    name: Packaging files
-    runs-on: ubuntu-latest
-    container: archlinux:latest
+    name: Packaging files (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+            container: archlinux:latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            container: menci/archlinuxarm:latest
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
     steps:
+      - name: Configure the Arch Linux ARM container
+        if: matrix.arch == 'aarch64'
+        run: |
+          sed -i '/^\[options\]/a DisableSandbox' /etc/pacman.conf
+          sed -i "s/^PKGEXT=.*/PKGEXT='.pkg.tar.zst'/" /etc/makepkg.conf
+
       - name: Install dependencies
-        run: pacman -Syu --noconfirm --needed base-devel git pacman-contrib
+        run: pacman -Syu --noconfirm --needed base-devel git pacman-contrib zstd
 
       - uses: actions/checkout@v7
 
@@ -143,13 +159,21 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: kio-dropbox-pacman-package
+          name: kio-dropbox-pacman-package-${{ matrix.arch }}
           path: dist/*.pkg.tar.zst
           if-no-files-found: error
 
   deb:
-    name: Debian package
-    runs-on: ubuntu-latest
+    name: Debian package (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     container: debian:trixie
     steps:
       - name: Install dependencies
@@ -180,15 +204,23 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: kio-dropbox-deb-package
+          name: kio-dropbox-deb-package-${{ matrix.arch }}
           path: |
             dist/*.deb
             dist/*.deb.sha256
           if-no-files-found: error
 
   rpm:
-    name: RPM package
-    runs-on: ubuntu-latest
+    name: RPM package (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     container: registry.fedoraproject.org/fedora:latest
     steps:
       - name: Install dependencies
@@ -215,7 +247,7 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: kio-dropbox-rpm-package
+          name: kio-dropbox-rpm-package-${{ matrix.arch }}
           path: |
             dist/*.rpm
             dist/*.rpm.sha256

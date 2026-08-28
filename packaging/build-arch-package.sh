@@ -101,7 +101,10 @@ printf "\noptions=('!debug')\n" >> PKGBUILD
 makepkg -sf --noconfirm --noprogressbar
 
 mkdir -p "$outdir"
-mv ./*.pkg.tar.zst "$outdir/"
+# Some Arch Linux ARM images set PKGDEST globally. Ask makepkg where it wrote
+# the artifacts instead of assuming they are in the current directory.
+mapfile -t packages < <(makepkg --packagelist)
+mv "${packages[@]}" "$outdir/"
 
 cd "$outdir"
 for pkg in *.pkg.tar.zst; do
