@@ -141,6 +141,10 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container: ${{ matrix.container }}
     steps:
+      - name: Disable pacman's download sandbox in the ARM container
+        if: matrix.arch == 'aarch64'
+        run: sed -i '/^\[options\]/a DisableSandbox' /etc/pacman.conf
+
       - name: Install dependencies
         run: pacman -Syu --noconfirm --needed base-devel git pacman-contrib sudo
 
