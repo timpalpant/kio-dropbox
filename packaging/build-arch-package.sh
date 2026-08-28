@@ -98,7 +98,9 @@ printf "\noptions=('!debug')\n" >> PKGBUILD
 # ---------------------------------------------------------------------------
 # -s installs missing dependencies, -f overwrites a previous build of the same
 # version.
-makepkg -sf --noconfirm --noprogressbar
+# Set PKGDEST explicitly: some Arch Linux ARM container images configure it
+# globally, which would otherwise place the finished package outside workdir.
+PKGDEST="$workdir" makepkg -sf --noconfirm --noprogressbar
 
 mkdir -p "$outdir"
 mv ./*.pkg.tar.zst "$outdir/"
