@@ -77,7 +77,7 @@ kc() { timeout 120 "$KIOCLIENT" "$@" 2>&1; }
 
 # kioclient's `ls` prints a blank line after each batch of entries the worker
 # reports, so strip those before comparing.
-kls() { kc ls "$1" | grep -v '^$'; }
+kls() { kc ls "$1" | grep -v -e '^$' -e '^\.$'; }
 
 reset_server() { curl -sf -X POST "$BASE/__control/reset" > /dev/null; }
 inject_fault() { curl -sf -X POST "$BASE/__control/fault/$1" > /dev/null; }
@@ -140,6 +140,19 @@ fi
 
 kc mkdir dropbox:/newfolder > /dev/null
 check_contains "mkdir" "newfolder" "$(kls dropbox:/)"
+
+# A KIO listing must describe the directory itself with a writable "." entry.
+# Dolphin uses that root item for its Paste permission check; this matters most
+# for a newly created empty folder, which has no child entries of its own.
+if "$BUILD_DIR/tests/list_writable" dropbox:/newfolder; then
+    ok "new empty folder advertises writable access"
+else
+    bad "new empty folder advertises writable access"
+fi
+
+printf 'pasted contents\n' > "$WORK/pasted.txt"
+kc copy "file://$WORK/pasted.txt" dropbox:/newfolder/ > /dev/null
+check "upload into a new empty folder" "pasted contents" "$(kc cat dropbox:/newfolder/pasted.txt)"
 
 kc move dropbox:/documents/upload.txt dropbox:/newfolder/moved.txt > /dev/null
 check "server-side move keeps contents" "uploaded contents" "$(kc cat dropbox:/newfolder/moved.txt)"

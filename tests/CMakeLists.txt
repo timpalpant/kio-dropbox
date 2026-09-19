@@ -10,6 +10,9 @@ find_program(KIOCLIENT_EXECUTABLE NAMES kioclient6 kioclient)
 find_package(Python3 COMPONENTS Interpreter)
 
 if(KIOCLIENT_EXECUTABLE AND Python3_Interpreter_FOUND)
+    add_executable(list_writable list_writable.cpp)
+    target_link_libraries(list_writable PRIVATE Qt6::Core KF6::KIOCore)
+
     add_test(
         NAME integration
         COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/run_tests.sh ${CMAKE_BINARY_DIR}

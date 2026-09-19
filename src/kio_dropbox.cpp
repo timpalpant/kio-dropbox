@@ -98,6 +98,7 @@ private:
 
     UDSEntry toUdsEntry(const DropboxEntry &entry) const;
     UDSEntry rootEntry() const;
+    static UDSEntry directoryEntry();
 
     /*! Server-side copy or move; \a endpoint is "files/copy_v2" or "files/move_v2". */
     Q_REQUIRED_RESULT WorkerResult transfer(const QString &endpoint, const QUrl &src, const QUrl &dest, JobFlags flags);
@@ -172,6 +173,16 @@ UDSEntry DropboxWorker::rootEntry() const
     return entry;
 }
 
+UDSEntry DropboxWorker::directoryEntry()
+{
+    UDSEntry entry;
+    entry.fastInsert(UDSEntry::UDS_NAME, "."_L1);
+    entry.fastInsert(UDSEntry::UDS_FILE_TYPE, S_IFDIR);
+    entry.fastInsert(UDSEntry::UDS_ACCESS, S_IRWXU);
+    entry.fastInsert(UDSEntry::UDS_MIME_TYPE, "inode/directory"_L1);
+    return entry;
+}
+
 UDSEntry DropboxWorker::toUdsEntry(const DropboxEntry &item) const
 {
     UDSEntry entry;
@@ -216,12 +227,23 @@ WorkerResult DropboxWorker::listDir(const QUrl &url)
 
     QString endpoint = "files/list_folder"_L1;
     uint count = 0;
+    bool listedDirectory = false;
 
     while (true) {
         QJsonObject result;
         DropboxError error;
         if (!m_api.rpc(endpoint, args, &result, &error)) {
             return toWorkerResult(error, url);
+        }
+
+        // KIO directory listings include an entry named "." describing the
+        // directory being listed. Dolphin uses it as the view's root item and
+        // checks its access bits before enabling Paste. This is especially
+        // visible for a newly created, empty folder, where there are no child
+        // entries to trigger any further metadata updates.
+        if (!listedDirectory) {
+            listEntry(path.isEmpty() ? rootEntry() : directoryEntry());
+            listedDirectory = true;
         }
 
         const QJsonArray entries = result.value("entries"_L1).toArray();

@@ -6,7 +6,7 @@
             "protocol": "dropbox",
             "input": "none",
             "output": "filesystem",
-            "listing": ["Name", "Type", "Size", "Date", "MimeType"],
+            "listing": ["Name", "Type", "Size", "Date", "Access", "MimeType"],
             "reading": true,
             "writing": true,
             "makedir": true,
