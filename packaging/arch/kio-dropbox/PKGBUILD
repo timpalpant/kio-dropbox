@@ -36,7 +36,7 @@ source=("$pkgname-$pkgver.tar.gz::$url/releases/download/v$pkgver/$pkgname-$pkgv
 # from kio-dropbox-$pkgver.tar.gz.sha256 in the release; the release workflow
 # prints the line to paste. An unreplaced placeholder fails the build, which is
 # the point -- a wrong hash must stop the build, not be waved through.
-sha256sums=('REPLACE_WITH_RELEASE_SHA256')
+sha256sums=('2efdd1f9ad7828140b373f433ad6a7564a8bcad4eb32ff6af868c95bc99bae4c')
 
 # The app key is committed in CMakeLists.txt -- it is a public client
 # identifier, not a secret. Add -DDROPBOX_APP_KEY=... below to build against
